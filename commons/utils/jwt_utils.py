@@ -11,7 +11,7 @@ def jwt_encode(payload, expires_in=3600):
     payload['iat'] = timezone.now()
     payload['exp'] = timezone.now() + timedelta(seconds=expires_in)
 
-    return jwt.encode(payload, settings.SECRET_KEY ,algorithm='HS256')
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
 
 
 def jwt_decode(token):

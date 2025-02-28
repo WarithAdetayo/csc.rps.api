@@ -7,88 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from commons.config.exceptions import MaximumFileSizeExceedError
-from commons.utils.choices import LEVEL_CHOICES
 from commons.utils.defaults import Regex, FileSizeLimit
-
-
-class Cleaner:
-
-    @staticmethod
-    def clean_repeated_whitespace(text: str):
-        """Ensure a single space exists between words"""
-
-        words = text.split()
-        return ' '.join(words)
-
-    @staticmethod
-    def clean_trailing_whitespace(text: str):
-        """Ensure there are no trailing spaces"""
-
-        return text.strip()
-
-    @staticmethod
-    def clean_company_name(company_name: str):
-        """Ensure a company is formatted correctly"""
-        if company_name:
-            company_name = company_name.strip().strip(',').strip('.').title()
-        return company_name
-
-    @staticmethod
-    def clean_address_to(office_title: str):
-        """Ensure the office title being addressed to is formatted correctly"""
-        if office_title:
-            office_title = office_title.strip().strip(',').strip('.').title()
-
-            if not office_title.startswith('The'):  # Ensure office title commence with article 'The'
-                office_title = f'The {office_title}'
-        return office_title
-
-    @staticmethod
-    def clean_address_state(state: str):
-        if state:
-            state = state.strip().strip(',').strip('.').title()
-            if 'State' in state:
-                state = state.replace('State', '')
-            state = state.strip()
-            state = state.strip(',')
-        return state
-
-    @staticmethod
-    def append_state_prefix(state: str):
-        if state and state.lower() not in ('fct', 'abuja', 'federal capital territory'):
-            if 'state' not in state.lower():
-                state = f'{state} State'
-        return state
-
-    @staticmethod
-    def clean_address_street(street: str):
-        if street:
-            street = street.strip().strip(',').strip('.').title()
-        return street
-
-    @staticmethod
-    def clean_address_city(city: str):
-        if city:
-            city = city.strip().strip(',').strip('.').title()
-        return city
-
-    @staticmethod
-    def clean_address_building_number(building_number: str):
-        if building_number:
-            building_number = building_number.strip().strip(',').strip('.').title()
-        return building_number
-
-    @staticmethod
-    def clean_address_building_name(building_name: str):
-        if building_name:
-            building_name = building_name.strip().strip(',').strip('.').title()
-        return building_name
-
-    @staticmethod
-    def clean_address_area(area: str):
-        if area:
-            area = area.strip().strip(',').strip('.').title()
-        return area
 
 
 def start_date_before_end_date(start_date: datetime, end_date: datetime):
@@ -148,17 +67,6 @@ def is_valid_matric_number(matric):
     if not matric_number.strip().isnumeric():
         raise ValidationError(_("This doesn't look like a matric number!"))
     return matric
-
-
-def is_valid_level(level):
-    """Validates the level of a student"""
-
-    level = int(level)
-
-    if level not in LEVEL_CHOICES:
-        raise ValidationError(_("Level seem incorrect"))
-
-    return level
 
 
 def is_not_future_year(year):
