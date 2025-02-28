@@ -6,6 +6,11 @@ name = "pypi"
 [packages]
 django = "*"
 django-rest-framework = "*"
+drf-spectacular = "*"
+django-cors-headers = "*"
+gunicorn = "*"
+djangorestframework-simplejwt = "*"
+pillow = "*"
 
 [dev-packages]
 
