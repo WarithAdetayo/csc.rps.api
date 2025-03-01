@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from appdata.models.abstract.a_model_audit_mixin import AModelAuditMixin
 from appdata.models.academic_session import AcademicSession
 from appdata.models.course import Course
+from appdata.models.enums.choices import ParseStatus
 from commons.utils.file_utils import rename_file_with_current_timestamp
 
 
@@ -45,7 +46,15 @@ class UploadHistory(AModelAuditMixin):
 
     uploaded_file = models.FileField(upload_to=upload_file,
                                      null=False,
-                                     blank=False)
+                                     blank=False,
+                                     max_length=512)
+
+    parse_status = models.CharField(verbose_name=_('Status'),
+                                    choices=ParseStatus.mapping(),
+                                    default=ParseStatus.PENDING,
+                                    null=False,
+                                    blank=True,
+                                    max_length=16)
 
     class Meta:
         verbose_name = _('Upload History')

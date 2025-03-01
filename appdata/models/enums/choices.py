@@ -10,3 +10,9 @@ class ModeOfEntry(Enum):
     DE = 'DE'
     UTME = 'UTME'
     TRANSFER = 'TRANSFER'
+
+
+class ParseStatus(Enum):
+    PENDING = 'PENDING'
+    FAILED = 'FAILED'
+    SUCCESSFUL = 'SUCCESSFUL'
