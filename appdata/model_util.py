@@ -2,7 +2,7 @@ def jsonify_itcc_user(instance) -> dict:
     if instance is None:
         return {}
     return {
-        'id': instance.id,
+        'user_id': instance.id,
         'email': instance.email,
         'first_name': instance.first_name,
         'last_name': instance.last_name,

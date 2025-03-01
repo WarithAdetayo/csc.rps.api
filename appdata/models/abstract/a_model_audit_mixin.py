@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 
 from appdata.model_util import jsonify_itcc_user
 from appdata.models.csc_rps_user import CSCRPSUser
+from csc_rps_api.middlewares import get_context_user
 
 
 class AModelAuditDateMixin(models.Model):
@@ -40,13 +41,13 @@ class AModelAuditMixin(AModelAuditDateMixin):
     @property
     def created_by(self):
         if self.created_by_user:
-            return CSCRPSUser.objects.get(pk=self.created_by_user.get('id'))
+            return CSCRPSUser.objects.get(pk=self.created_by_user.get('user_id'))
         return None
 
     @property
     def last_modified_by(self):
         if self.last_modified_by_user:
-            return CSCRPSUser.objects.get(pk=self.last_modified_by_user.get('id'))
+            return CSCRPSUser.objects.get(pk=self.last_modified_by_user.get('user_id'))
         return None
 
     def save(self, *args, force_insert=False, force_update=False, using=None, update_fields=None):

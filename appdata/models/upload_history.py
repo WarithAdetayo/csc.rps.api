@@ -55,7 +55,7 @@ class UploadHistory(AModelAuditMixin):
                                     null=False,
                                     blank=True,
                                     max_length=16)
-
+  
     class Meta:
         verbose_name = _('Upload History')
         verbose_name_plural = _('Upload Histories')
