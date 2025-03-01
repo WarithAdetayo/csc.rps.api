@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+import os
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -31,6 +32,16 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+
+    # App
+    'appdata',
+    'api',
+
+    # Third Party
+    'corsheaders',
+    'rest_framework',
+    'drf_spectacular',
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -40,6 +51,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+
+    # Third Party middleware
+    'corsheaders.middleware.CorsMiddleware',
+
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -47,6 +62,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+
+    'csc_rps_api.middlewares.ContextUserMiddleware'
 ]
 
 ROOT_URLCONF = "csc_rps_api.urls"
@@ -122,4 +139,60 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+AUTH_USER_MODEL = "appdata.CSCRPSUser"
+
 MEDIA_URL = "media/"
+
+
+# Rest Framework Settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# DRF Spectacular Settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'CSC RPS API',
+    'DESCRIPTION': 'CSC UI Result Processing System API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://localhost:8080",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1",
+    "http://localhost:5500",
+    "http://localhost:5173"
+]
+
+
+# ############# Asset Directory Configuration ############# #
+ASSETS_DIR = 'site/assets'
+LOCAL_ASSETS_DIR = os.path.join(BASE_DIR, ASSETS_DIR)
+
+# Actual directory user files go to
+MEDIA_ROOT = os.path.join(LOCAL_ASSETS_DIR, 'media/')
+
+# Static files
+STATIC_ROOT = os.path.join(LOCAL_ASSETS_DIR, 'static/')
+
+
+# ############# File Upload Directory Configuration ############# #
+USER_ACCOUNT_FILES_DIR_ROOT = 'account/'
+SYSTEM_FILES_DIR_ROOT = 'system/'
+
+
+# ############# Simple JWT Configuration ############# #
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+
+    "USER_ID_FIELD": "user_id",
+}
