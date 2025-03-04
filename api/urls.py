@@ -12,5 +12,6 @@ urlpatterns = [
 
     path('academic-sessions/', include('api.result_processing.academic_session.urls')),
     path('levels/', include('api.result_processing.level.urls')),
-    path('students/', include('api.result_processing.student.urls'))
+    path('students/', include('api.result_processing.student.urls')),
+    path('session-registration/', include('api.result_processing.session_registration.urls'))
 ]
