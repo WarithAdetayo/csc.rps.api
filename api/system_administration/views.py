@@ -20,7 +20,7 @@ from api.system_administration.serializers import UploadHistorySerializer, Uploa
         }
     )
 )
-class GenerateTemplateView(APIView):  # Kept as APIView due to file download
+class GenerateTemplateView(APIView):
     def get(self, request, session_id, course_id):
         try:
             session = AcademicSession.objects.get(academic_session_id=session_id)
@@ -51,7 +51,8 @@ class GenerateTemplateView(APIView):  # Kept as APIView due to file download
         }
     )
 )
-class UploadScoreSheetView(APIView):  # Kept as APIView due to custom file processing
+
+class UploadScoreSheetView(APIView):
     def post(self, request, session_id, course_id):
         file = request.FILES.get("file")
         if not file:
@@ -74,14 +75,14 @@ class UploadScoreSheetView(APIView):  # Kept as APIView due to custom file proce
         ws = wb.active
         errors = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            student_id, course_code, score = row
+            matric_number, course_code, score = row  # Changed from student_id
             if not score:
-                errors.append(f"Missing score for student {student_id}")
+                errors.append(f"Missing score for student {matric_number}")
                 continue
 
             try:
                 session_reg = SessionRegistration.objects.get(
-                    student__student_id=student_id,
+                    student__matric_number=matric_number,  # Changed from student__student_id
                     session=session
                 )
                 CourseRegistration.objects.create(
@@ -90,7 +91,7 @@ class UploadScoreSheetView(APIView):  # Kept as APIView due to custom file proce
                     score=score
                 )
             except SessionRegistration.DoesNotExist:
-                errors.append(f"Student {student_id} not registered for session {session}")
+                errors.append(f"Student {matric_number} not registered for session {session}")
             except Exception as e:
                 errors.append(str(e))
 
@@ -105,6 +106,7 @@ class UploadScoreSheetView(APIView):  # Kept as APIView due to custom file proce
             response_data["errors"] = errors
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
+
 
 @extend_schema_view(
     get=extend_schema(
