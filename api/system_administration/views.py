@@ -75,14 +75,14 @@ class UploadScoreSheetView(APIView):
         ws = wb.active
         errors = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            matric_number, course_code, score = row  # Changed from student_id
+            matric_number, course_code, score = row  
             if not score:
                 errors.append(f"Missing score for student {matric_number}")
                 continue
 
             try:
                 session_reg = SessionRegistration.objects.get(
-                    student__matric_number=matric_number,  # Changed from student__student_id
+                    student__matric_number=matric_number,  
                     session=session
                 )
                 CourseRegistration.objects.create(
