@@ -1,15 +1,17 @@
-from api.system_administration.osafe_users.services import UserService
+# from api.system_administration.osafe_users.services import UserService
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+from api.system_administration.csc_rps_user.services import UserService
 
 
 class ObtainTokenPairSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
-        username_or_email = attrs.get('email')
+        email = attrs.get('email')
         password = attrs.get('password')
 
-        user = UserService.get_user_by_email_or_username(username_or_email)
+        user = UserService.get_user_by_email(email)
         if user is None or not user.check_password(password):
             raise serializers.ValidationError("Invalid credentials")
 
