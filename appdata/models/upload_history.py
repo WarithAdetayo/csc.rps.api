@@ -10,11 +10,14 @@ from appdata.models.abstract.a_model_audit_mixin import AModelAuditMixin
 from appdata.models.academic_session import AcademicSession
 from appdata.models.course import Course
 from appdata.models.enums.choices import ParseStatus
-from commons.utils.file_utils import rename_file_with_current_timestamp
+from commons.utils.file_utils import rename_file_with_current_timestamp, format_session
 
 
 def upload_file(instance, filename):
-    path = os.path.join(settings.SYSTEM_FILES_DIR_ROOT, 'uploads', rename_file_with_current_timestamp(filename))
+    path = os.path.join(settings.SYSTEM_FILES_DIR_ROOT,
+                        'uploads',
+                        format_session(instance.session.session),
+                        rename_file_with_current_timestamp(filename))
     return path
 
 
