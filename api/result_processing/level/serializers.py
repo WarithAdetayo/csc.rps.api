@@ -9,4 +9,12 @@ class LevelSerializer(serializers.ModelSerializer):
         model = Level
         fields = '__all__'
         read_only_fields = ('level_id', 'date_created',
-                            'date_last_modified', 'created_by_user', 'last_modified_by')
+                            'date_last_modified', 'created_by_user', 'last_modified_by_user')
+
+
+class MinimalLevelSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Level
+        fields = ('level_id', 'level')
+        read_only_fields = ('level_id', )

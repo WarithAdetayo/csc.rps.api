@@ -9,4 +9,4 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = '__all__'
         read_only_fields = ('course_id', 'date_created',
-                            'date_last_modified', 'created_by_user', 'last_modified_by')
+                            'date_last_modified', 'created_by_user', 'last_modified_by_user')
