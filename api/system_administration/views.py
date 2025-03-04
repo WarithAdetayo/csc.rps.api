@@ -1,16 +1,30 @@
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 import openpyxl
+from drf_spectacular.utils import extend_schema_view, extend_schema
 from appdata.models import CourseRegistration, Course, UploadHistory, SessionRegistration, AcademicSession
 from appdata.models.enums.choices import ParseStatus
+from api.system_administration.serializers import UploadHistorySerializer, UploadResponseSerializer
 
-class GenerateTemplateView(APIView):
+@extend_schema_view(
+    get=extend_schema(
+        summary='Generate score sheet template',
+        description='Generate an Excel template for uploading scores for a given session and course',
+        tags=['Score Sheet Upload'],
+        responses={
+            200: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            400: {'description': 'Invalid session or course'}
+        }
+    )
+)
+class GenerateTemplateView(APIView):  # Kept as APIView due to file download
     def get(self, request, session_id, course_id):
         try:
-            session = AcademicSession.objects.get(academic_session_id=session_id)  # Fixed from id
-            course = Course.objects.get(course_id=course_id)               # Fixed from id
+            session = AcademicSession.objects.get(academic_session_id=session_id)
+            course = Course.objects.get(course_id=course_id)
         except (AcademicSession.DoesNotExist, Course.DoesNotExist):
             return Response({"error": "Invalid session or course"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -25,15 +39,27 @@ class GenerateTemplateView(APIView):
         wb.save(response)
         return response
 
-class UploadScoreSheetView(APIView):
+@extend_schema_view(
+    post=extend_schema(
+        summary='Upload score sheet',
+        description='Upload an Excel file with student scores for a session and course',
+        tags=['Score Sheet Upload'],
+        request={'multipart/form-data': {'file': 'file'}},
+        responses={
+            201: UploadResponseSerializer,
+            400: UploadResponseSerializer
+        }
+    )
+)
+class UploadScoreSheetView(APIView):  # Kept as APIView due to custom file processing
     def post(self, request, session_id, course_id):
         file = request.FILES.get("file")
         if not file:
             return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            session = AcademicSession.objects.get(academic_session_id=session_id)  # Fixed from id
-            course = Course.objects.get(course_id=course_id)               # Fixed from id
+            session = AcademicSession.objects.get(academic_session_id=session_id)
+            course = Course.objects.get(course_id=course_id)
         except (AcademicSession.DoesNotExist, Course.DoesNotExist):
             return Response({"error": "Invalid session or course"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -71,17 +97,23 @@ class UploadScoreSheetView(APIView):
         upload.parse_status = ParseStatus.FAILED if errors else ParseStatus.SUCCESS
         upload.save()
 
+        response_data = {
+            "message": "Upload successful" if not errors else "Upload failed",
+            "upload_id": upload.upload_history_id
+        }
         if errors:
-            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "Upload successful", "upload_id": upload.upload_history_id}, status=status.HTTP_201_CREATED)
+            response_data["errors"] = errors
+            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
-class UploadHistoryView(APIView):
-    def get(self, request):
-        uploads = UploadHistory.objects.all().values(
-            "upload_history_id",
-            "session__session",
-            "course__course_code",
-            "upload_timestamp",
-            "parse_status"
-        )
-        return Response(list(uploads))
+@extend_schema_view(
+    get=extend_schema(
+        summary='List upload history',
+        description='Retrieve the history of all score sheet uploads',
+        tags=['Score Sheet Upload'],
+        responses={200: UploadHistorySerializer(many=True)}
+    )
+)
+class UploadHistoryView(ListAPIView):
+    queryset = UploadHistory.objects.all()
+    serializer_class = UploadHistorySerializer
