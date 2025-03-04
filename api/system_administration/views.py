@@ -1,12 +1,14 @@
+# api/system_administration/views.py
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.http import HttpResponse
 import openpyxl
-from drf_spectacular.utils import extend_schema_view, extend_schema
 from appdata.models import CourseRegistration, Course, UploadHistory, SessionRegistration, AcademicSession
 from appdata.models.enums.choices import ParseStatus
+from django.contrib.auth.models import AnonymousUser
+from drf_spectacular.utils import extend_schema_view, extend_schema
 from api.system_administration.serializers import UploadHistorySerializer, UploadResponseSerializer
 
 @extend_schema_view(
@@ -51,7 +53,6 @@ class GenerateTemplateView(APIView):
         }
     )
 )
-
 class UploadScoreSheetView(APIView):
     def post(self, request, session_id, course_id):
         file = request.FILES.get("file")
@@ -64,38 +65,55 @@ class UploadScoreSheetView(APIView):
         except (AcademicSession.DoesNotExist, Course.DoesNotExist):
             return Response({"error": "Invalid session or course"}, status=status.HTTP_400_BAD_REQUEST)
 
-        upload = UploadHistory.objects.create(
-            session=session,
-            course=course,
-            uploaded_file=file,
-            uploaded_by=request.user
-        )
+        upload = UploadHistory(session=session, course=course, uploaded_file=file)
+        if isinstance(request.user, AnonymousUser):
+            upload.created_by_user = "system"
+            upload.last_modified_by_user = "system"
+        else:
+            upload.created_by_user = request.user.user_id
+            upload.last_modified_by_user = request.user.user_id
+        upload.save()
 
         wb = openpyxl.load_workbook(file)
         ws = wb.active
         errors = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            matric_number, course_code, score = row  
+            matric_number, course_code, score = row
             if not score:
                 errors.append(f"Missing score for student {matric_number}")
                 continue
 
             try:
                 session_reg = SessionRegistration.objects.get(
-                    student__matric_number=matric_number,  
+                    student__matric_number=matric_number,
                     session=session
                 )
-                CourseRegistration.objects.create(
+                registration, created = CourseRegistration.objects.get_or_create(
                     session_registration=session_reg,
                     course=course,
-                    score=score
+                    defaults={'score': score}
                 )
+                if not created:
+                    registration.score = score
+                    if isinstance(request.user, AnonymousUser):
+                        registration.last_modified_by_user = "system"
+                    else:
+                        registration.last_modified_by_user = request.user.user_id
+                    registration.save()
+                else:
+                    if isinstance(request.user, AnonymousUser):
+                        registration.created_by_user = "system"
+                        registration.last_modified_by_user = "system"
+                    else:
+                        registration.created_by_user = request.user.user_id
+                        registration.last_modified_by_user = request.user.user_id
+                    registration.save()
             except SessionRegistration.DoesNotExist:
                 errors.append(f"Student {matric_number} not registered for session {session}")
             except Exception as e:
                 errors.append(str(e))
 
-        upload.parse_status = ParseStatus.FAILED if errors else ParseStatus.SUCCESS
+        upload.parse_status = ParseStatus.FAILED if errors else ParseStatus.SUCCESSFUL  # Changed from SUCCESS
         upload.save()
 
         response_data = {
@@ -106,7 +124,6 @@ class UploadScoreSheetView(APIView):
             response_data["errors"] = errors
             return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
         return Response(response_data, status=status.HTTP_201_CREATED)
-
 
 @extend_schema_view(
     get=extend_schema(
