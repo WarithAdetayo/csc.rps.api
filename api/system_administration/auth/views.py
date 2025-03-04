@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 
 
@@ -7,7 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
     tags=['Authentication']
 )
 class ObtainTokenPairView(TokenObtainPairView):
-    pass
+    permission_classes = [AllowAny]
 
 
 @extend_schema(
@@ -15,7 +16,7 @@ class ObtainTokenPairView(TokenObtainPairView):
     tags=['Authentication']
 )
 class RefreshTokenView(TokenRefreshView):
-    pass
+    permission_classes = [AllowAny]
 
 
 @extend_schema(
@@ -23,4 +24,4 @@ class RefreshTokenView(TokenRefreshView):
     tags=['Authentication']
 )
 class VerifyTokenView(TokenVerifyView):
-    pass
+    permission_classes = [AllowAny]
