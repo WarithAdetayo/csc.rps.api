@@ -11,11 +11,10 @@ from appdata.models.student import Student
 
 
 class SessionRegistration(AModelAuditMixin):
-
-    session_registration = models.CharField(verbose_name=_('Session Registration Id'),
-                                            primary_key=True,
-                                            default=uuid.uuid4,
-                                            max_length=64)
+    session_registration_id = models.CharField(verbose_name=_('Session Registration Id'),
+                                               primary_key=True,
+                                               default=uuid.uuid4,
+                                               max_length=64)
 
     session = models.ForeignKey(to=AcademicSession,
                                 verbose_name=_('Academic Session'),

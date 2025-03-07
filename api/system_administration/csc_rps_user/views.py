@@ -1,6 +1,6 @@
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework.generics import CreateAPIView, UpdateAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from api.system_administration.csc_rps_user.serializers import CreateAccountSerializer, ProfilePictureSerializer
 
@@ -12,6 +12,7 @@ from api.system_administration.csc_rps_user.serializers import CreateAccountSeri
 )
 class CreateAccountAPIView(CreateAPIView):
     serializer_class = CreateAccountSerializer
+    permission_classes = [AllowAny]
 
 
 @extend_schema_view(
