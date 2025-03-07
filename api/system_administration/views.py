@@ -1,4 +1,3 @@
-# api/system_administration/views.py
 from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
@@ -10,11 +9,12 @@ from appdata.models.enums.choices import ParseStatus
 from django.contrib.auth.models import AnonymousUser
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from api.system_administration.serializers import UploadHistorySerializer, UploadResponseSerializer
+from django.db import transaction
 
 @extend_schema_view(
     get=extend_schema(
         summary='Generate score sheet template',
-        description='Generate an Excel template for uploading scores for a given session and course',
+        description='Generate an Excel template for uploading scores with matric number, CA score, exam score, and total for a given session and course',
         tags=['Score Sheet Upload'],
         responses={
             200: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -33,8 +33,8 @@ class GenerateTemplateView(APIView):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = f"{course.course_code} Scores"
-        ws.append(["student_id", "course_code", "score"])
-        ws.append(["", course.course_code, ""])
+        ws.append(["matric_number", "course_code", "ca_score", "exam_score", "total"])
+        ws.append(["", course.course_code, "", "", ""])
 
         response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         response["Content-Disposition"] = f"attachment; filename={course.course_code}_template.xlsx"
@@ -44,7 +44,7 @@ class GenerateTemplateView(APIView):
 @extend_schema_view(
     post=extend_schema(
         summary='Upload score sheet',
-        description='Upload an Excel file with student scores for a session and course',
+        description='Upload an Excel file with student scores (CA and exam) for a session and course. Rejects the sheet if any errors occur.',
         tags=['Score Sheet Upload'],
         request={'multipart/form-data': {'file': 'file'}},
         responses={
@@ -77,10 +77,18 @@ class UploadScoreSheetView(APIView):
         wb = openpyxl.load_workbook(file)
         ws = wb.active
         errors = []
+
+        # Validate all rows before any updates
+        updates = []
         for row in ws.iter_rows(min_row=2, values_only=True):
-            matric_number, course_code, score = row
-            if not score:
-                errors.append(f"Missing score for student {matric_number}")
+            matric_number, course_code, ca_score, exam_score, total = row
+            if not all([matric_number, course_code, ca_score is not None, exam_score is not None, total is not None]):
+                errors.append(f"Missing data for student {matric_number}")
+                continue
+
+            # Validate total
+            if ca_score + exam_score != total:
+                errors.append(f"Total mismatch for {matric_number}: CA ({ca_score}) + Exam ({exam_score}) != {total}")
                 continue
 
             try:
@@ -88,42 +96,39 @@ class UploadScoreSheetView(APIView):
                     student__matric_number=matric_number,
                     session=session
                 )
-                registration, created = CourseRegistration.objects.get_or_create(
+                registration = CourseRegistration.objects.get(
                     session_registration=session_reg,
-                    course=course,
-                    defaults={'score': score}
+                    course=course
                 )
-                if not created:
-                    registration.score = score
-                    if isinstance(request.user, AnonymousUser):
-                        registration.last_modified_by_user = "system"
-                    else:
-                        registration.last_modified_by_user = request.user.user_id
-                    registration.save()
-                else:
-                    if isinstance(request.user, AnonymousUser):
-                        registration.created_by_user = "system"
-                        registration.last_modified_by_user = "system"
-                    else:
-                        registration.created_by_user = request.user.user_id
-                        registration.last_modified_by_user = request.user.user_id
-                    registration.save()
+                updates.append((registration, ca_score, exam_score))
             except SessionRegistration.DoesNotExist:
                 errors.append(f"Student {matric_number} not registered for session {session}")
+            except CourseRegistration.DoesNotExist:
+                errors.append(f"Course registration not found for student {matric_number} and course {course.course_code}")
             except Exception as e:
                 errors.append(str(e))
 
-        upload.parse_status = ParseStatus.FAILED if errors else ParseStatus.SUCCESSFUL  # Changed from SUCCESS
-        upload.save()
-
-        response_data = {
-            "message": "Upload successful" if not errors else "Upload failed",
-            "upload_id": upload.upload_history_id
-        }
+        # If any errors, reject the sheet
         if errors:
-            response_data["errors"] = errors
-            return Response(response_data, status=status.HTTP_400_BAD_REQUEST)
-        return Response(response_data, status=status.HTTP_201_CREATED)
+            upload.parse_status = ParseStatus.FAILED
+            upload.save()
+            return Response({"message": "Upload failed", "upload_id": upload.upload_history_id, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Apply updates within a transaction
+        with transaction.atomic():
+            for registration, ca_score, exam_score in updates:
+                registration.ca_score = ca_score
+                registration.exam_score = exam_score
+                if isinstance(request.user, AnonymousUser):
+                    registration.last_modified_by_user = "system"
+                else:
+                    registration.last_modified_by_user = request.user.user_id
+                registration.save()
+
+            upload.parse_status = ParseStatus.SUCCESSFUL
+            upload.save()
+
+        return Response({"message": "Upload successful", "upload_id": upload.upload_history_id}, status=status.HTTP_201_CREATED)
 
 @extend_schema_view(
     get=extend_schema(
